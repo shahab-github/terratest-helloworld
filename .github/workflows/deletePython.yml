@@ -1,64 +1,29 @@
-name: Python delete branches
+name: Delete abandoned branches
 
 on:
-  workflow_dispatch:
+  # Run daily at midnight
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
+
+  # Allow workflow to be manually run from the GitHub UI
+  workflow_dispatch:
 
 jobs:
-  delete-stale-branches:
+  cleanup_old_branches:
     runs-on: ubuntu-latest
-
+    name: Satisfy my repo CDO
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.x
-        
-    - name: Install GitPython
-      run: pip install GitPython
+      - name: Delete those pesky dead branches
+        uses: phpdocker-io/github-actions-delete-abandoned-branches@v2
+        id: delete_stuff
+        with:
+          github_token: ${{ github.token }}
+          last_commit_age_days: 100
+          ignore_branches: next-version,dont-deleteme
+          github_base_url: https://api.github.com/
 
-    - name: Fetch branches  
-      run: |
-        import git
-        repo = git.Repo('.')
-        repo.remote().fetch(prune=True)
-      
-    - name: Get stale branches
-      run: |
-        import git
-        
-        repo = git.Repo('.')
-        
-        stale_branches = []
-        
-        for branch in repo.remote().refs:
-            if branch.name.endswith('/gone'):
-                stale_branches.append(branch.name[:-5])
-                
-        print(f'Stale branches: {stale_branches}')
-      id: stale_branches
-            
-    - name: Delete stale local branches  
-      run: |
-        import git
-        
-        repo = git.Repo('.')
-        
-        stale_branches = '${{ steps.stale_branches.outputs.result }}'
-        
-        for branch in stale_branches:
-            repo.delete_head(branch, force=True)
-            
-    - name: Delete stale remote branches
-      run: |
-        import git
-        
-        repo = git.Repo('.')
-        
-        stale_branches = '${{ steps.stale_branches.outputs.result }}'
-        
-        for branch in stale_branches:
-            repo.remote().push(refspec=f':{branch}')
+          # Disable dry run and actually get stuff deleted
+          dry_run: no
+
+      - name: Get output
+        run: "echo 'Deleted branches: ${{ steps.delete_stuff.outputs.deleted_branches }}'"
