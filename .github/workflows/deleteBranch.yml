@@ -33,9 +33,11 @@ jobs:
         done < branches.txt
 
     - name: Delete stale branches
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         if [ -s stale_branches.txt ]; then
-          cat stale_branches.txt | xargs -I {} git push --delete origin {}
+          cat stale_branches.txt | xargs -I {} git push --delete origin {} --username github-actions --password $GH_TOKEN
         else
           echo "No stale branches to delete."
         fi
