@@ -1,0 +1,28 @@
+name: 'Delete stale branches'
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  delete-stale-branches:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Fetch branches
+        run: |
+          git fetch --prune --unshallow
+
+      - name: Delete stale local branches
+        run: |
+          git branch -vv | grep ': gone]' | grep -v '\*' | xargs -n 1 git branch -D
+
+      - name: Delete stale remote branches
+        run: |         
+          git branch -vv | grep ': gone]' | grep -v '\*' | awk '{print $1}' | xargs -n 1 git push origin --delete
