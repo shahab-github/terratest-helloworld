@@ -37,7 +37,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
         if [ -s stale_branches.txt ]; then
-          cat stale_branches.txt | xargs -I {} git push --delete origin {} --username github-actions --password $GH_TOKEN
+          cat stale_branches.txt | xargs -I {} git push origin --delete {}
         else
           echo "No stale branches to delete."
         fi
