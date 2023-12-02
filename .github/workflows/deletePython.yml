@@ -1,0 +1,64 @@
+name: Python delete branches
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  delete-stale-branches:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+        
+    - name: Install GitPython
+      run: pip install GitPython
+
+    - name: Fetch branches  
+      run: |
+        import git
+        repo = git.Repo('.')
+        repo.remote().fetch(prune=True)
+      
+    - name: Get stale branches
+      run: |
+        import git
+        
+        repo = git.Repo('.')
+        
+        stale_branches = []
+        
+        for branch in repo.remote().refs:
+            if branch.name.endswith('/gone'):
+                stale_branches.append(branch.name[:-5])
+                
+        print(f'Stale branches: {stale_branches}')
+      id: stale_branches
+            
+    - name: Delete stale local branches  
+      run: |
+        import git
+        
+        repo = git.Repo('.')
+        
+        stale_branches = '${{ steps.stale_branches.outputs.result }}'
+        
+        for branch in stale_branches:
+            repo.delete_head(branch, force=True)
+            
+    - name: Delete stale remote branches
+      run: |
+        import git
+        
+        repo = git.Repo('.')
+        
+        stale_branches = '${{ steps.stale_branches.outputs.result }}'
+        
+        for branch in stale_branches:
+            repo.remote().push(refspec=f':{branch}')
