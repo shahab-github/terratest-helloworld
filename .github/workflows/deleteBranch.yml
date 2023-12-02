@@ -1,0 +1,41 @@
+name: Delete Stale Branches
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight
+
+jobs:
+  delete-stale-branches:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: List branches
+      run: |
+        git fetch --prune --tags
+        git branch -r --format "%(refname:short)" > branches.txt
+
+    - name: Determine stale branches
+      run: |
+        days_before_stale=30
+        current_date=$(date +%s)
+
+        while IFS= read -r branch; do
+          last_commit_date=$(git log -n 1 --format="%at" $branch)
+          days_since_last_commit=$(( (current_date - last_commit_date) / (60*60*24) ))
+          
+          if [ $days_since_last_commit -gt $days_before_stale ]; then
+            echo "$branch" >> stale_branches.txt
+          fi
+        done < branches.txt
+
+    - name: Delete stale branches
+      run: |
+        if [ -s stale_branches.txt ]; then
+          cat stale_branches.txt | xargs -I {} git push --delete origin {}
+        else
+          echo "No stale branches to delete."
+        fi
