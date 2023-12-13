@@ -2,8 +2,8 @@ name: 'Delete stale branches'
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'
+#  schedule:
+#    - cron: '0 0 * * *'
 
 jobs:
   delete-stale-branches:
